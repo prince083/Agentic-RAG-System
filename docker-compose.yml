@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    container_name: rag_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data  # Persist Vector DB
+    env_file:
+      - .env
+    environment:
+      - FRONTEND_URL=http://localhost  # In prod, frontend is on port 80 (default)
+
+  frontend:
+    build: ./frontend
+    container_name: rag_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
