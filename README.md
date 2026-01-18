@@ -56,3 +56,10 @@ graph TD
 2. Add `GOOGLE_API_KEY` to `.env`
 3. Run Backend: `venv\Scripts\python -m uvicorn app.main:app --port 8000 --reload`
 4. Run Frontend: `cd frontend && npm run dev`
+
+## 📸 Screenshots
+### Intelligent RAG with Error Handling
+![Success](screenshots/demo_success.png)
+
+### Robust Validation & Feedback
+![Validation Error Handled](screenshots/demo_val_error.png)
