@@ -13,25 +13,54 @@ function App() {
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files?.length) return;
-    const file = e.target.files[0];
 
-    // 10MB Limit Check
-    if (file.size > 10 * 1024 * 1024) {
-      alert("File is too large! Please upload a PDF smaller than 10MB.");
-      return;
-    }
+    // Convert FileList to Array
+    const files = Array.from(e.target.files);
+
+    // Filter and Validate
+    const validFiles = files.filter(file => {
+      if (file.size > 10 * 1024 * 1024) {
+        alert(`Skipped ${file.name}: File too large (Max 10MB)`);
+        return false;
+      }
+      return true;
+    });
+
+    if (validFiles.length === 0) return;
 
     setUploading(true);
     const formData = new FormData();
-    formData.append('file', file);
+    // Key must match backend parameter name 'files' (plural)
+    validFiles.forEach(file => {
+      formData.append('files', file);
+    });
 
     try {
-      await axios.post(`${API_URL}/api/v1/ingest`, formData);
-      const fileName = file.name || "Document";
-      setMessages(prev => [...prev, { role: 'assistant', content: `✅ Successfully uploaded **${fileName}**! I have processed it.` }]);
+      const res = await axios.post(`${API_URL}/api/v1/ingest`, formData);
+
+      const results = res.data;
+      const successes = results.filter((r: any) => r.status === 'success');
+      const failures = results.filter((r: any) => r.status === 'error');
+
+      let msg = "";
+      if (successes.length > 0) {
+        const names = successes.map((d: any) => d.filename).join(", ");
+        msg += `✅ Successfully processed: **${names}**. `;
+      }
+
+      if (failures.length > 0) {
+        const names = failures.map((d: any) => d.filename).join(", ");
+        const reasons = failures.map((d: any) => `(${d.filename}: ${d.error_message})`).join(" ");
+        msg += `\n❌ Failed: ${names} ${reasons}`;
+      }
+
+      if (!msg) msg = "⚠️ No files were processed.";
+
+      setMessages(prev => [...prev, { role: 'assistant', content: msg }]);
+
     } catch (err) {
       console.error(err);
-      setMessages(prev => [...prev, { role: 'assistant', content: "❌ Error uploading file. Check console for details." }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: "❌ Error uploading batch. Check console for details." }]);
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -47,7 +76,16 @@ function App() {
     setLoading(true);
 
     try {
-      const res = await axios.post(`${API_URL}/api/v1/chat`, { message: userMsg });
+      // Prepare history: Map to {role, content} and take last 10 messages
+      const history = messages.slice(-10).map(m => ({
+        role: m.role,
+        content: m.content
+      }));
+
+      const res = await axios.post(`${API_URL}/api/v1/chat`, {
+        message: userMsg,
+        history: history
+      });
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: res.data.answer,
@@ -66,11 +104,31 @@ function App() {
     <div className="min-h-screen bg-gray-900 text-gray-100 font-sans flex flex-col items-center p-6">
       <div className="w-full max-w-4xl flex flex-col h-[90vh]">
 
+        {/* Hidden Input for Global Access */}
+        <input
+          type="file"
+          ref={fileInputRef}
+          className="hidden"
+          accept=".pdf,.docx"
+          multiple
+          onChange={handleFileUpload}
+        />
+
         {/* Header */}
-        <div className="flex justify-center items-center mb-6 p-4 bg-gray-800 rounded-xl shadow-lg border border-gray-700">
+        <div className="flex justify-between items-center mb-6 p-4 bg-gray-800 rounded-xl shadow-lg border border-gray-700">
           <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
             Agentic RAG System
           </h1>
+
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm text-gray-300 transition-colors border border-gray-600"
+            title="Upload more files"
+          >
+            {uploading ? <Loader2 className="animate-spin w-4 h-4" /> : <Upload className="w-4 h-4" />}
+            <span className="hidden sm:inline">Add Files</span>
+          </button>
         </div>
 
         {/* Chat Area */}
@@ -80,13 +138,7 @@ function App() {
               <Bot className="w-16 h-16 mb-6 text-blue-500 opacity-80" />
               <p className="text-lg mb-6 font-medium">Upload a document and start asking questions!</p>
 
-              <input
-                type="file"
-                ref={fileInputRef}
-                className="hidden"
-                accept=".pdf"
-                onChange={handleFileUpload}
-              />
+
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
@@ -96,7 +148,7 @@ function App() {
                 Upload Document
               </button>
               <p className="mt-4 text-sm text-gray-500">
-                Please ensure the file is a PDF and maintains a reasonable size (Max 10MB).
+                Supported: PDF, DOCX (Max 10MB each).
               </p>
             </div>
           )}

@@ -12,12 +12,12 @@ class RAGService:
             temperature=0.3
         )
 
-    async def answer_question(self, query: str) -> Dict[str, Any]:
+    async def answer_question(self, query: str, history: List[Dict[str, str]] = []) -> Dict[str, Any]:
         """
-        Retrieve context and answer using Gemini.
+        Retrieve context and answer using Gemini, considering conversation history.
         """
         # 1. Retrieve
-        chunks = await vector_db.search(query, k=5)
+        chunks = await vector_db.search(query, k=15)
         
         if not chunks:
             return {
@@ -31,15 +31,23 @@ class RAGService:
             for c in chunks
         ])
 
+        # Format History
+        history_text = ""
+        for msg in history[-5:]: # Keep last 5 messages for context window efficiency
+            role = "User" if msg['role'] == 'user' else "Assistant"
+            history_text += f"{role}: {msg['content']}\n"
+
         # 3. Construct Prompt
-        # Gemini often prefers a single prompt block
         full_prompt = f"""You are a helpful AI assistant. Answer the question based ONLY on the following context.
 If you cannot answer from the context, state that you don't have enough information.
 
 Context:
 {context_text}
 
-Question: {query}
+Conversation History:
+{history_text}
+
+Current Question: {query}
 """
 
         # 4. Call LLM

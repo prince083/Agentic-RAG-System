@@ -21,13 +21,14 @@ Build an AI system that can reason over PDFs/DOCs, cite sources, remember contex
 ## ✅ Completed Features
 - **Project Architecture**: Scalable FastAPI backend with ChromaDB vector storage.
 - **Document Ingestion**: Robust pipeline for processing PDF and DOCX files.
+- **Multiple File Uploads**: Batch processing logic to upload multiple documents at once.
 - **Smart Chunking**: Automatic text splitting into semantic segments (800 chars).
 - **Semnatic Search**: High-performance retrieval using **Google Gemini Embeddings**.
 - **RAG Engine**: Context-aware answering using **Gemini Flash**.
+- **Conversation Memory**: Enabling the agent to remember context across multiple turns.
 - **Modern UI**: Polished React frontend with Citation support and Dark Mode.
 
 ## 🚀 Upcoming Features
-- **Conversation Memory**: Enabling the agent to remember context across multiple turns.
 - **Agentic Capabilities**: Allowing the AI to make decisions and use tools autonomously.
 - **Action Execution**: Connecting to external APIs (e.g., Email, Calendar).
 - **Voice Interaction**: Adding Speech-to-Text and Text-to-Speech layers.

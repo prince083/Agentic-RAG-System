@@ -9,6 +9,7 @@ class ProcessedChunk(BaseModel):
 
 class IngestionResponse(BaseModel):
     filename: str
-    total_chunks: int
-    chunks: List[ProcessedChunk]
+    total_chunks: int = 0
+    chunks: List[ProcessedChunk] = []
     status: str = "success"
+    error_message: Optional[str] = None

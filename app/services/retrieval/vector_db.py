@@ -1,5 +1,6 @@
 from typing import List, Dict, Any, Optional
 import chromadb
+import asyncio
 from chromadb.utils import embedding_functions
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from app.core.config import settings
@@ -16,7 +17,7 @@ class VectorDBService:
         # and pass them as lists to Chroma.
         
         self.embeddings = GoogleGenerativeAIEmbeddings(
-            model="models/text-embedding-004", 
+            model="models/gemini-embedding-001", 
             google_api_key=settings.GOOGLE_API_KEY
         )
         
@@ -44,6 +45,12 @@ class VectorDBService:
                 # Generate embeddings
                 embeddings = self.embeddings.embed_documents(texts)
 
+                # Delete existing chunks with same IDs to prevent "Duplicate ID" error
+                try:
+                    self.collection.delete(ids=ids)
+                except:
+                    pass # Ignore if IDs don't exist yet
+
                 self.collection.add(
                     documents=texts,
                     embeddings=embeddings,
@@ -53,7 +60,6 @@ class VectorDBService:
                 print(f"Added batch {i//BATCH_SIZE + 1} ({len(batch)} chunks)")
                 
                 # Sleep to be nice to the API (configurable for Production)
-                import asyncio
                 await asyncio.sleep(2) 
                 
             except Exception as e:

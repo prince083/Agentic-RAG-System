@@ -7,7 +7,9 @@ router = APIRouter()
 @router.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
     try:
-        response = await rag_service.answer_question(request.message)
+        # Convert Pydantic models to list of dicts for the service
+        history_dicts = [{"role": m.role, "content": m.content} for m in request.history]
+        response = await rag_service.answer_question(request.message, history_dicts)
         return ChatResponse(
             answer=response["answer"],
             sources=list(set(response["sources"])) # Deduplicate sources
